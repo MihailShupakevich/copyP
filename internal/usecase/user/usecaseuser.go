@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gtank/crypto/bcrypt"
-	"log"
 	"time"
 )
 
@@ -72,9 +71,8 @@ func (u *UsecaseForRepo) UpdateUser(userId int, updateUser domain.User) (domain.
 func (u *UsecaseForRepo) Login(body domain.User) (domain.User, error) {
 	login, err := u.userRepo.Login(body)
 	if err != nil {
-		log.Fatal("OoOps,is not correct login")
+		return domain.User{}, err
 	}
-
 	return login, err
 }
 
@@ -84,7 +82,7 @@ func (u *UsecaseForRepo) Registration(body domain.User) (string, error) {
 	fmt.Println(body)
 	id, err := u.userRepo.Registration(body)
 	if err != nil {
-		log.Fatal("OoOps,is not correct registration")
+		return "nil", err
 	}
 	token, _ := GenerateToken(id)
 	return token, err

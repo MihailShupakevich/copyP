@@ -4,7 +4,6 @@ import (
 	"exp/internal/domain"
 	"exp/internal/usecase/user"
 	"github.com/gin-gonic/gin"
-	"log"
 	"net/http"
 	"strconv"
 )
@@ -30,7 +29,7 @@ func New(uc user.UsecaseForRepo) *userHandler {
 func (h *userHandler) FindUsers(ctx *gin.Context) {
 	allUsers, err := h.userUC.FindAll()
 	if err != nil {
-		log.Fatal("Error finding users")
+		ctx.JSON(400, "Error finding users")
 	}
 	ctx.JSON(http.StatusOK, gin.H{"users": &allUsers})
 
@@ -43,7 +42,7 @@ func (h *userHandler) FindUser(ctx *gin.Context) {
 	idInt, _ := strconv.Atoi(id)
 	user, err := h.userUC.FindUserById(idInt)
 	if err != nil {
-		log.Fatal("Error finding user")
+		ctx.JSON(400, "Error finding user")
 	}
 	ctx.JSON(http.StatusOK, gin.H{"user": &user})
 }
@@ -56,7 +55,7 @@ func (h *userHandler) CreateUsers(ctx *gin.Context) {
 	}
 	users, err := h.userUC.CreateUsers(body)
 	if err != nil {
-		log.Fatal("Error creating users")
+		ctx.JSON(400, "Error creating users")
 	}
 	ctx.JSON(http.StatusOK, gin.H{"users": &users})
 }
@@ -74,7 +73,7 @@ func (h *userHandler) UpdateUser(ctx *gin.Context) {
 	idInt, _ := strconv.Atoi(id)
 	user, err := h.userUC.UpdateUser(idInt, *updateUser)
 	if err != nil {
-		log.Fatal("Error update user")
+		ctx.JSON(400, "Error update user")
 	}
 	ctx.JSON(http.StatusOK, gin.H{"user - Updating": &user})
 }
@@ -86,7 +85,7 @@ func (h *userHandler) DeleteUser(ctx *gin.Context) {
 	idInt, _ := strconv.Atoi(id)
 	user, err := h.userUC.DeleteUser(idInt)
 	if err != nil {
-		log.Fatal("Error delete user")
+		ctx.JSON(400, "Error delete user")
 	}
 	ctx.JSON(http.StatusOK, gin.H{user: "successfully deleted"})
 }
@@ -99,7 +98,7 @@ func (h *userHandler) Registration(ctx *gin.Context) {
 	}
 	token, err := h.userUC.Registration(*body)
 	if err != nil {
-		log.Fatal("Error registration user")
+		ctx.JSON(400, "Error registration user")
 	}
 	ctx.JSON(http.StatusOK, gin.H{"token": token, "message": "Успешно сформирован"})
 
@@ -112,7 +111,7 @@ func (h *userHandler) Login(ctx *gin.Context) {
 	}
 	login, err := h.userUC.Login(*body)
 	if err != nil {
-		log.Fatal("Error login user")
+		ctx.JSON(400, "Error login user")
 	}
 	ctx.JSON(http.StatusOK, gin.H{"login": login})
 }
