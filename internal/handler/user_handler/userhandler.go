@@ -1,8 +1,8 @@
-package user
+package user_handler
 
 import (
 	"exp/internal/domain"
-	"exp/internal/usecase/user"
+	"exp/internal/usecase/user_usecase"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
@@ -19,10 +19,10 @@ type Handler interface {
 }
 
 type userHandler struct {
-	userUC user.UsecaseForRepo
+	userUC user_usecase.UsecaseForRepo
 }
 
-func New(uc user.UsecaseForRepo) *userHandler {
+func New(uc user_usecase.UsecaseForRepo) *userHandler {
 	return &userHandler{userUC: uc}
 }
 
@@ -42,9 +42,9 @@ func (h *userHandler) FindUser(ctx *gin.Context) {
 	idInt, _ := strconv.Atoi(id)
 	user, err := h.userUC.FindUserById(idInt)
 	if err != nil {
-		ctx.JSON(400, "Error finding user")
+		ctx.JSON(400, "Error finding user_repo")
 	}
-	ctx.JSON(http.StatusOK, gin.H{"user": &user})
+	ctx.JSON(http.StatusOK, gin.H{"user_repo": &user})
 }
 
 func (h *userHandler) CreateUsers(ctx *gin.Context) {
@@ -73,9 +73,9 @@ func (h *userHandler) UpdateUser(ctx *gin.Context) {
 	idInt, _ := strconv.Atoi(id)
 	user, err := h.userUC.UpdateUser(idInt, *updateUser)
 	if err != nil {
-		ctx.JSON(400, "Error update user")
+		ctx.JSON(400, "Error update user_repo")
 	}
-	ctx.JSON(http.StatusOK, gin.H{"user - Updating": &user})
+	ctx.JSON(http.StatusOK, gin.H{"user_repo - Updating": &user})
 }
 func (h *userHandler) DeleteUser(ctx *gin.Context) {
 	id := ctx.Param("id")
@@ -85,7 +85,7 @@ func (h *userHandler) DeleteUser(ctx *gin.Context) {
 	idInt, _ := strconv.Atoi(id)
 	user, err := h.userUC.DeleteUser(idInt)
 	if err != nil {
-		ctx.JSON(400, "Error delete user")
+		ctx.JSON(400, "Error delete user_repo")
 	}
 	ctx.JSON(http.StatusOK, gin.H{user: "successfully deleted"})
 }
@@ -98,7 +98,7 @@ func (h *userHandler) Registration(ctx *gin.Context) {
 	}
 	token, err := h.userUC.Registration(*body)
 	if err != nil {
-		ctx.JSON(400, "Error registration user")
+		ctx.JSON(400, "Error registration user_repo")
 	}
 	ctx.JSON(http.StatusOK, gin.H{"token": token, "message": "Успешно сформирован"})
 
@@ -111,7 +111,7 @@ func (h *userHandler) Login(ctx *gin.Context) {
 	}
 	login, err := h.userUC.Login(*body)
 	if err != nil {
-		ctx.JSON(400, "Error login user")
+		ctx.JSON(400, "Error login user_repo")
 	}
 	ctx.JSON(http.StatusOK, gin.H{"login": login})
 }

@@ -1,8 +1,8 @@
-package user
+package user_usecase
 
 import (
 	"exp/internal/domain"
-	"exp/internal/repository/user"
+	"exp/internal/repository/user_repo"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gtank/crypto/bcrypt"
@@ -20,10 +20,10 @@ type Usecase interface {
 }
 
 type UsecaseForRepo struct {
-	userRepo user.UserRepository
+	userRepo user_repo.UserRepository
 }
 
-func New(userRepos user.UserRepository) UsecaseForRepo {
+func New(userRepos user_repo.UserRepository) UsecaseForRepo {
 	return UsecaseForRepo{userRepo: userRepos}
 }
 
@@ -40,8 +40,8 @@ func (u *UsecaseForRepo) FindUserById(userId int) (domain.User, error) {
 	return user, err
 }
 
-//	func (u *UsecaseForRepo) CreateUser(user *domain.User) (domain.User, error) {
-//		newUser, err := u.userRepo.CreateUser(*user)
+//	func (u *UsecaseForRepo) CreateUser(user_repo *domain.User) (domain.User, error) {
+//		newUser, err := u.userRepo.CreateUser(*user_repo)
 //		if err != nil {
 //			err.Error()
 //		}

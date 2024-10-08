@@ -3,12 +3,12 @@ package main
 import (
 	"exp/internal/db"
 	postHandler "exp/internal/handler/post"
-	user3 "exp/internal/handler/user"
+	user3 "exp/internal/handler/user_handler"
 	"exp/internal/middlewares"
 	post2 "exp/internal/repository/post"
-	user2 "exp/internal/repository/user"
+	user2 "exp/internal/repository/user_repo"
 	"exp/internal/usecase/post"
-	"exp/internal/usecase/user"
+	"exp/internal/usecase/user_usecase"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,7 +17,7 @@ func main() {
 	database, _ := db.Connect()
 
 	userRepoRouter := user2.New(database)
-	userUC := user.New(userRepoRouter)
+	userUC := user_usecase.New(userRepoRouter)
 	userH := user3.New(userUC)
 
 	//post
@@ -26,7 +26,7 @@ func main() {
 	postH := postHandler.New(postUC)
 	router := gin.Default()
 
-	v0 := router.Group("/user")
+	v0 := router.Group("/user_repo")
 	{
 
 		v0.GET("/", userH.FindUsers)

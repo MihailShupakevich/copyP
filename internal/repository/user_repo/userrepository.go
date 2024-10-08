@@ -1,4 +1,4 @@
-package user
+package user_repo
 
 import (
 	"exp/internal/domain"
@@ -36,7 +36,7 @@ func (u UserRepo) FindAllUsers() ([]domain.User, error) {
 func (u UserRepo) FindUser(userId int) (domain.User, error) {
 	var user domain.User
 	u.DB.Preload("Posts").Model(&user).Where("id = ?", userId).Omit("password").Find(&user)
-	//.Omit("Posts.id_user").First(&user, "id = ?", userId).Omit("password", "user_id")
+	//.Omit("Posts.id_user").First(&user_repo, "id = ?", userId).Omit("password", "user_id")
 	return user, nil
 }
 
