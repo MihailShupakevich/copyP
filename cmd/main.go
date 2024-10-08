@@ -2,12 +2,12 @@ package main
 
 import (
 	"exp/internal/db"
-	postHandler "exp/internal/handler/post"
+	postHandler "exp/internal/handler/post_handler"
 	user3 "exp/internal/handler/user_handler"
 	"exp/internal/middlewares"
-	post2 "exp/internal/repository/post"
+	post2 "exp/internal/repository/post_repo"
 	user2 "exp/internal/repository/user_repo"
-	"exp/internal/usecase/post"
+	"exp/internal/usecase/post_usecase"
 	"exp/internal/usecase/user_usecase"
 	"github.com/gin-gonic/gin"
 )
@@ -20,9 +20,9 @@ func main() {
 	userUC := user_usecase.New(userRepoRouter)
 	userH := user3.New(userUC)
 
-	//post
+	//post_handler
 	postRepoRouter := post2.New(database)
-	postUC := post.New(postRepoRouter)
+	postUC := post_usecase.New(postRepoRouter)
 	postH := postHandler.New(postUC)
 	router := gin.Default()
 
@@ -38,12 +38,12 @@ func main() {
 		v0.GET("/login", middlewares.JwtMiddleware(), userH.Login)
 	}
 
-	//post router
-	v1 := router.Group("/post")
+	//post_handler router
+	v1 := router.Group("/post_handler")
 	{
 		v1.PATCH("/:id", postH.UpdatePost)
 		v1.GET("/:id", postH.GetPost)
-		v1.POST("/post", postH.CreatePost)
+		v1.POST("/post_handler", postH.CreatePost)
 		v1.DELETE("/:id", postH.DeletePost)
 	}
 	router.Run(":8080")
