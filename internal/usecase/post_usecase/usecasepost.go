@@ -1,8 +1,8 @@
-package post
+package post_usecase
 
 import (
 	"exp/internal/domain"
-	"exp/internal/repository/post"
+	"exp/internal/repository/post_repo"
 )
 
 type UsecasePost interface {
@@ -13,10 +13,10 @@ type UsecasePost interface {
 }
 
 type UsecaseForRepoPost struct {
-	postRepo post.PostRepository
+	postRepo post_repo.PostRepository
 }
 
-func New(postRepos post.PostRepository) UsecaseForRepoPost {
+func New(postRepos post_repo.PostRepository) UsecaseForRepoPost {
 	return UsecaseForRepoPost{postRepo: postRepos}
 }
 
