@@ -3,6 +3,7 @@ package user_handler
 import (
 	"exp/internal/domain"
 	"exp/internal/usecase/user_usecase"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
@@ -40,11 +41,33 @@ func (h *userHandler) FindUser(ctx *gin.Context) {
 		ctx.JSON(404, "User not found")
 	}
 	idInt, _ := strconv.Atoi(id)
+	//user, err := h.userUC.FindUserById(idInt)
+	//if err != nil {
+	//	ctx.JSON(400, "Error finding user_repo")
+	//}
+	//ctx.JSON(http.StatusOK, gin.H{"useR": &user})
+	fmt.Println("H1")
+	// Попробуйте получить пользователя из Redis
+	userRedis, err := h.userUC.GetUserById(idInt)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"user": &userRedis})
+	}
+	fmt.Println("H2")
+	// Если не нашли в Redis, получаем из основной БД
 	user, err := h.userUC.FindUserById(idInt)
 	if err != nil {
-		ctx.JSON(400, "Error finding user_repo")
+		ctx.JSON(404, "User not found in the database")
+		return
 	}
+	fmt.Println("H3")
+	// Сохраняем пользователя в Redis для последующих запросов
+	_, err = h.userUC.SetUser(user)
+	if err != nil {
+		ctx.JSON(400, "Error setting user")
+	}
+
 	ctx.JSON(http.StatusOK, gin.H{"user_repo": &user})
+	fmt.Println("H4")
 }
 
 func (h *userHandler) CreateUsers(ctx *gin.Context) {
@@ -52,11 +75,21 @@ func (h *userHandler) CreateUsers(ctx *gin.Context) {
 	err := ctx.BindJSON(body)
 	if err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
 	}
 	users, err := h.userUC.CreateUsers(body)
 	if err != nil {
 		ctx.JSON(400, "Error creating users")
+		return
 	}
+	for _, user := range users {
+		_, setErr := h.userUC.SetUser(user)
+		if setErr != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error saving user to Redis"})
+			return
+		}
+	}
+
 	ctx.JSON(http.StatusOK, gin.H{"users": &users})
 }
 

@@ -1,32 +1,47 @@
 package main
 
 import (
+	"exp/config"
 	"exp/internal/db"
 	postHandler "exp/internal/handler/post_handler"
-	user3 "exp/internal/handler/user_handler"
+	"exp/internal/handler/user_handler"
 	"exp/internal/middlewares"
-	post2 "exp/internal/repository/post_repo"
-	user2 "exp/internal/repository/user_repo"
+	"exp/internal/repository/post_repo"
+	"exp/internal/repository/user_repo"
 	"exp/internal/usecase/post_usecase"
 	"exp/internal/usecase/user_usecase"
 	"github.com/gin-gonic/gin"
+	"log"
 )
 
 func main() {
+	cfg := config.Config{
+		RedisAddr:     "localhost:6379",
+		RedisPassword: "",
+		RedisDB:       0,
+	}
+	redis := db.RedisInit(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
+	if redis == nil {
+		log.Fatal("Ошибка инициализации Redis")
+	}
 
-	database, _ := db.Connect()
+	database, err := db.Connect()
+	if err != nil {
+		log.Fatalf("Ошибка подключения к PostgreSQL: %v", err)
+	}
+	//db.RedisAddData()
 
-	userRepoRouter := user2.New(database)
-	userUC := user_usecase.New(userRepoRouter)
-	userH := user3.New(userUC)
+	userRepoRouter := user_repo.New(database, redis)
+	userUC := user_usecase.New(userRepoRouter, userRepoRouter)
+	userH := user_handler.New(userUC)
 
 	//post_handler
-	postRepoRouter := post2.New(database)
+	postRepoRouter := post_repo.New(database)
 	postUC := post_usecase.New(postRepoRouter)
 	postH := postHandler.New(postUC)
 	router := gin.Default()
 
-	v0 := router.Group("/user_repo")
+	v0 := router.Group("user")
 	{
 
 		v0.GET("/", userH.FindUsers)
@@ -39,11 +54,11 @@ func main() {
 	}
 
 	//post_handler router
-	v1 := router.Group("/post_handler")
+	v1 := router.Group("/post")
 	{
 		v1.PATCH("/:id", postH.UpdatePost)
 		v1.GET("/:id", postH.GetPost)
-		v1.POST("/post_handler", postH.CreatePost)
+		v1.POST("/post", postH.CreatePost)
 		v1.DELETE("/:id", postH.DeletePost)
 	}
 	router.Run(":8080")

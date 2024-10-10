@@ -17,14 +17,17 @@ type Usecase interface {
 	UpdateUser(userId int, user domain.User) (domain.User, error)
 	Login(body domain.User) (domain.User, error)
 	Registration(body domain.User) (string, error)
+	SetUser(user domain.User) (domain.User, error)
+	GetUserById(userId int) (domain.User, error)
 }
 
 type UsecaseForRepo struct {
-	userRepo user_repo.UserRepository
+	userRepo  user_repo.UserRepository
+	redisRepo user_repo.RedisRepository
 }
 
-func New(userRepos user_repo.UserRepository) UsecaseForRepo {
-	return UsecaseForRepo{userRepo: userRepos}
+func New(userRepos user_repo.UserRepository, redisRepos user_repo.RedisRepository) UsecaseForRepo {
+	return UsecaseForRepo{userRepo: userRepos, redisRepo: redisRepos}
 }
 
 func (u *UsecaseForRepo) FindAll() ([]domain.User, error) {
@@ -40,13 +43,6 @@ func (u *UsecaseForRepo) FindUserById(userId int) (domain.User, error) {
 	return user, err
 }
 
-//	func (u *UsecaseForRepo) CreateUser(user_repo *domain.User) (domain.User, error) {
-//		newUser, err := u.userRepo.CreateUser(*user_repo)
-//		if err != nil {
-//			err.Error()
-//		}
-//		return newUser, err
-//	}
 func (u *UsecaseForRepo) CreateUsers(users *[]domain.User) ([]domain.User, error) {
 	newUsers, err := u.userRepo.CreateUsers(*users)
 	if err != nil {
@@ -97,4 +93,22 @@ func GenerateToken(userId int) (string, error) {
 	})
 	tokenString, err := token.SignedString(secretKey)
 	return tokenString, err
+}
+func (u *UsecaseForRepo) SetUser(user domain.User) (domain.User, error) {
+	newRedisUser, err := u.redisRepo.SetUser(user)
+	fmt.Println("UC1")
+	if err != nil {
+		return domain.User{}, err
+	}
+	return newRedisUser, nil // Возвращаем пользователя, если все прошло успешно
+}
+
+func (u *UsecaseForRepo) GetUserById(userId int) (domain.User, error) {
+	fmt.Println("UC2#1")
+	user, err := u.redisRepo.GetUserById(userId)
+	fmt.Println("UC2#2")
+	if err != nil {
+		return domain.User{}, err // Возвращаем ошибку, если не удалось получить пользователя
+	}
+	return user, nil // Возвращаем пользователя, если все прошло успешно
 }
