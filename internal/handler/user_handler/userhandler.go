@@ -2,8 +2,8 @@ package user_handler
 
 import (
 	"exp/internal/domain"
+	"exp/internal/middlewares/tokens"
 	"exp/internal/usecase/user_usecase"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
@@ -17,6 +17,7 @@ type Handler interface {
 	DeleteUser(c *gin.Context)
 	Registration(c *gin.Context)
 	Login(c *gin.Context)
+	RefreshToken(c *gin.Context)
 }
 
 type userHandler struct {
@@ -46,20 +47,19 @@ func (h *userHandler) FindUser(ctx *gin.Context) {
 	//	ctx.JSON(400, "Error finding user_repo")
 	//}
 	//ctx.JSON(http.StatusOK, gin.H{"useR": &user})
-	fmt.Println("H1")
+
 	// Попробуйте получить пользователя из Redis
 	userRedis, err := h.userUC.GetUserById(idInt)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"user": &userRedis})
+	if err == nil {
+		ctx.JSON(http.StatusOK, gin.H{"user_repo": &userRedis})
+		return
 	}
-	fmt.Println("H2")
 	// Если не нашли в Redis, получаем из основной БД
 	user, err := h.userUC.FindUserById(idInt)
 	if err != nil {
 		ctx.JSON(404, "User not found in the database")
 		return
 	}
-	fmt.Println("H3")
 	// Сохраняем пользователя в Redis для последующих запросов
 	_, err = h.userUC.SetUser(user)
 	if err != nil {
@@ -67,7 +67,6 @@ func (h *userHandler) FindUser(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"user_repo": &user})
-	fmt.Println("H4")
 }
 
 func (h *userHandler) CreateUsers(ctx *gin.Context) {
@@ -129,11 +128,11 @@ func (h *userHandler) Registration(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 	}
-	token, err := h.userUC.Registration(*body)
+	newBody, err := h.userUC.Registration(*body)
 	if err != nil {
-		ctx.JSON(400, "Error registration user_repo")
+		ctx.JSON(400, "Error registration user")
 	}
-	ctx.JSON(http.StatusOK, gin.H{"token": token, "message": "Успешно сформирован"})
+	ctx.JSON(http.StatusOK, gin.H{"newBody": newBody, "message": "Успешно создан"})
 
 }
 func (h *userHandler) Login(ctx *gin.Context) {
@@ -142,9 +141,32 @@ func (h *userHandler) Login(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 	}
+
 	login, err := h.userUC.Login(*body)
 	if err != nil {
-		ctx.JSON(400, "Error login user_repo")
+		ctx.JSON(400, "Error login user")
+		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"login": login})
+
+	userId := login.Id
+	tokenPair, err := tokens.GenerateTokenPair(userId)
+	if err != nil {
+		ctx.JSON(400, "Error generating token pair")
+	}
+	ctx.JSON(200, gin.H{"login": login, "tokens": tokenPair})
+}
+
+func (h *userHandler) RefreshToken(ctx *gin.Context) {
+	refreshToken := ctx.PostForm("refresh_token")
+	if refreshToken == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "refresh_token is required"})
+		return
+	}
+	newTokenPair, err := tokens.RefreshToken(refreshToken)
+	if err != nil {
+		ctx.JSON(403, gin.H{"error": "Error refresh token"})
+		return
+	}
+	ctx.JSON(200, newTokenPair)
 }

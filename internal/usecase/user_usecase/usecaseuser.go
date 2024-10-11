@@ -4,9 +4,7 @@ import (
 	"exp/internal/domain"
 	"exp/internal/repository/user_repo"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gtank/crypto/bcrypt"
-	"time"
 )
 
 type Usecase interface {
@@ -16,7 +14,7 @@ type Usecase interface {
 	DeleteUser(userId int) (domain.User, error)
 	UpdateUser(userId int, user domain.User) (domain.User, error)
 	Login(body domain.User) (domain.User, error)
-	Registration(body domain.User) (string, error)
+	Registration(body domain.User) (domain.User, error)
 	SetUser(user domain.User) (domain.User, error)
 	GetUserById(userId int) (domain.User, error)
 }
@@ -64,36 +62,39 @@ func (u *UsecaseForRepo) UpdateUser(userId int, updateUser domain.User) (domain.
 	}
 	return updateUserVar, err
 }
-func (u *UsecaseForRepo) Login(body domain.User) (domain.User, error) {
-	login, err := u.userRepo.Login(body)
+func (uc *UsecaseForRepo) Login(user domain.User) (domain.User, error) {
+	existingUser, err := uc.userRepo.Login(user)
 	if err != nil {
 		return domain.User{}, err
 	}
-	return login, err
+	if existingUser.UserName == "" {
+		return domain.User{}, nil
+	}
+	return existingUser, nil
 }
 
-func (u *UsecaseForRepo) Registration(body domain.User) (string, error) {
+func (u *UsecaseForRepo) Registration(body domain.User) (domain.User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(body.Password), 12)
 	body.Password = string(hashedPassword)
-	fmt.Println(body)
-	id, err := u.userRepo.Registration(body)
+	newBody, err := u.userRepo.Registration(body)
 	if err != nil {
-		return "nil", err
+		return domain.User{}, err
 	}
-	token, _ := GenerateToken(id)
-	return token, err
+
+	return newBody, err
 }
 
-// Ge To
-func GenerateToken(userId int) (string, error) {
-	secretKey := []byte("your-256-bit-secret")
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id_user": userId,
-		"exp":     time.Now().Add(time.Minute * 30).Unix(),
-	})
-	tokenString, err := token.SignedString(secretKey)
-	return tokenString, err
-}
+// // Ge To
+//
+//	func GenerateToken(userId int) (string, error) {
+//		secretKey := []byte("your-256-bit-secret")
+//		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+//			"id_user": userId,
+//			"exp":     time.Now().Add(time.Minute * 30).Unix(),
+//		})
+//		tokenString, err := token.SignedString(secretKey)
+//		return tokenString, err
+//	}
 func (u *UsecaseForRepo) SetUser(user domain.User) (domain.User, error) {
 	newRedisUser, err := u.redisRepo.SetUser(user)
 	fmt.Println("UC1")

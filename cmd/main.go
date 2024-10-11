@@ -5,7 +5,6 @@ import (
 	"exp/internal/db"
 	postHandler "exp/internal/handler/post_handler"
 	"exp/internal/handler/user_handler"
-	"exp/internal/middlewares"
 	"exp/internal/repository/post_repo"
 	"exp/internal/repository/user_repo"
 	"exp/internal/usecase/post_usecase"
@@ -29,7 +28,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Ошибка подключения к PostgreSQL: %v", err)
 	}
-	//db.RedisAddData()
 
 	userRepoRouter := user_repo.New(database, redis)
 	userUC := user_usecase.New(userRepoRouter, userRepoRouter)
@@ -44,13 +42,18 @@ func main() {
 	v0 := router.Group("user")
 	{
 
+		v0.POST("/register", userH.Registration)
+		//token
+		v0.POST("/login", userH.Login)
+		v0.POST("/refresh", userH.RefreshToken)
+		//
 		v0.GET("/", userH.FindUsers)
 		v0.POST("/users", userH.CreateUsers)
 		v0.GET("/:id", userH.FindUser)
 		v0.DELETE("/:id", userH.DeleteUser)
 		v0.PATCH("/:id", userH.UpdateUser)
-		v0.POST("/register", userH.Registration)
-		v0.GET("/login", middlewares.JwtMiddleware(), userH.Login)
+
+		//v0.GET("/login", middlewares.JwtMiddleware(), userH.Login)
 	}
 
 	//post_handler router

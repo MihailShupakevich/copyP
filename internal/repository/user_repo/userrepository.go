@@ -6,6 +6,7 @@ import (
 	"exp/internal/domain"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"github.com/gtank/crypto/bcrypt"
 	"gorm.io/gorm"
 	"log"
 	"strconv"
@@ -19,7 +20,7 @@ type UserRepository interface {
 	UpdateUser(userId int, updateUser domain.User) (domain.User, error)
 	DeleteUser(userId int) (string, error)
 	Login(body domain.User) (domain.User, error)
-	Registration(body domain.User) (int, error)
+	Registration(body domain.User) (domain.User, error)
 }
 
 type RedisRepository interface {
@@ -47,28 +48,9 @@ func (u *UserRepo) FindAllUsers() ([]domain.User, error) {
 
 func (u *UserRepo) FindUser(userId int) (domain.User, error) {
 	var user domain.User
-	//ctx := context.Background()
-	//
-	//// Попытка получить пользователя из кеша
-	//cachedUser, err := u.RedisClient.Get(ctx, strconv.Itoa(userId)).Result()
-	//if err == nil {
-	//	// Если пользователь найден в кэше, десериализуем его
-	//	if err := json.Unmarshal([]byte(cachedUser), &user); err == nil {
-	//		return user, nil
-	//	}
-	//}
-
-	// Если пользователь не найден в кэше, получаем из базы данных
 	if err := u.DB.Preload("Posts").First(&user, userId).Error; err != nil {
 		return domain.User{}, err
 	}
-
-	//// Кэшируем пользователя в Redis
-	//userJSON, err := json.Marshal(user)
-	//if err == nil {
-	//	u.RedisClient.Set(ctx, strconv.Itoa(userId), userJSON, time.Hour)
-	//}
-
 	return user, nil
 }
 
@@ -85,17 +67,9 @@ func (u *UserRepo) UpdateUser(userId int, updateUser domain.User) (domain.User, 
 	if err := u.DB.First(&user, "id = ?", userId).Error; err != nil {
 		return domain.User{}, err
 	}
-
-	// Обновление пользователя в базе данных
 	if err := u.DB.Model(&user).Updates(updateUser).Error; err != nil {
 		return domain.User{}, err
 	}
-	//
-	//// Обновление кеша
-	//if err := u.SetUser(user); err != nil {
-	//	return domain.User{}, err
-	//}
-
 	return user, nil
 }
 
@@ -105,8 +79,6 @@ func (u *UserRepo) DeleteUser(userId int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	// Удаление пользователя из кеша
 	ctx := context.Background()
 	u.RedisClient.Del(ctx, strconv.Itoa(userId))
 
@@ -115,29 +87,35 @@ func (u *UserRepo) DeleteUser(userId int) (string, error) {
 
 func (u *UserRepo) Login(body domain.User) (domain.User, error) {
 	var user domain.User
-	if err := u.DB.First(&user, "user_name = ?", body.UserName).Error; err != nil {
-		return domain.User{}, err
+
+	if err := u.DB.First(&user, "username = ?", body.UserName).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return domain.User{}, nil // Пользователь не найден
+		}
+		return domain.User{}, err // Возврат ошибки, если ошибка не связана с отсутствием записи
 	}
-	return user, nil
+	// Проверка пароля
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password)) // Проверяем хэш пароля
+	if err != nil {
+		return domain.User{}, nil // Неверный пароль
+	}
+	return user, nil // Возвращаем найденного пользователя
 }
 
-func (u *UserRepo) Registration(body domain.User) (int, error) {
+func (u *UserRepo) Registration(body domain.User) (domain.User, error) {
 	err := u.DB.Create(&body).Error
 	if err != nil {
 		log.Fatal("Registration is failed:", err)
-		return 0, err
+		return domain.User{}, err
 	}
-	return body.Id, nil
+	return body, nil
 }
 
 // Реализация интерфейса RedisRepository
 func (u *UserRepo) GetUserById(id int) (domain.User, error) {
-	fmt.Println("REpo1")
 	ctx := context.Background()
-
 	// Получение пользователя из кэша Redis
 	cachedUser, err := u.RedisClient.Get(ctx, strconv.Itoa(id)).Result()
-	fmt.Println("REpo2")
 	if err == redis.Nil {
 		// Если ключ не найден, возвращаем ошибку или nil
 		return domain.User{}, nil // или return domain.User{}, errors.New("user not found in cache")
@@ -151,8 +129,6 @@ func (u *UserRepo) GetUserById(id int) (domain.User, error) {
 	if err := json.Unmarshal([]byte(cachedUser), &user); err != nil {
 		return domain.User{}, err
 	}
-	fmt.Println("Repo3")
-
 	return user, nil
 }
 
