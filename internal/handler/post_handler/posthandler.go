@@ -2,6 +2,7 @@ package post_handler
 
 import (
 	"exp/internal/domain"
+	"exp/internal/middlewares"
 	"exp/internal/usecase/post_usecase"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -25,6 +26,7 @@ func New(ucp post_usecase.UsecaseForRepoPost) PostHandler {
 }
 
 func (h *PostHandler) SetupRoutes(router *gin.RouterGroup) {
+	router.Use(middlewares.JwtMiddleware())
 	router.PATCH("/:id", h.UpdatePost)
 	router.GET("/:id", h.GetPost)
 	router.POST("/post", h.CreatePost)

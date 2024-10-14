@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 type Handler interface {
@@ -147,14 +148,15 @@ func (h *userHandler) Registration(ctx *gin.Context) {
 		return
 	}
 	userId := newBody.Id
-	tokenAccess, err := tokens.GenerateToken(userId, 3)
-	tokenRefresh, err := tokens.GenerateToken(userId, 10)
+	tokenAccess, err := tokens.GenerateToken(userId, time.Hour*1)
+	tokenRefresh, err := tokens.GenerateToken(userId, time.Hour*1)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating token pair"})
 		return
 	}
-	ctx.Header("refresh_token", tokenRefresh)
-	ctx.Header("access_token", tokenAccess)
+
+	ctx.Header("Authorization", tokenAccess)
+	ctx.Header("RefreshToken", tokenRefresh)
 	ctx.JSON(http.StatusOK, gin.H{"newBody": newBody})
 }
 
@@ -172,8 +174,8 @@ func (h *userHandler) Login(ctx *gin.Context) {
 	}
 
 	userId := login.Id
-	tokenAccess, err := tokens.GenerateToken(userId, 3)
-	tokenRefresh, err := tokens.GenerateToken(userId, 10)
+	tokenAccess, err := tokens.GenerateToken(userId, 300)
+	tokenRefresh, err := tokens.GenerateToken(userId, 100)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating token pair"})
 		return

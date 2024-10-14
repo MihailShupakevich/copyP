@@ -1,50 +1,18 @@
 package tokens
 
 import (
-	"time"
-
 	"github.com/dgrijalva/jwt-go"
+	"time"
 )
 
-//
-//type Token struct {
-//	AccessToken  string `json:"access_token"`
-//	RefreshToken string `json:"refresh_token"`
-//}
-
-//	func GenerateTokenPair(userId int) (Token, error) {
-//		accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-//			"id":  userId,
-//			"exp": time.Now().Add(time.Minute * 3).Unix(),
-//		})
-//
-//		refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-//			"id":  userId,
-//			"exp": time.Now().Add(time.Minute * 5).Unix(),
-//		})
-//
-//		accessTokenString, err := accessToken.SignedString([]byte("secretKey"))
-//		if err != nil {
-//			return Token{}, err
-//		}
-//
-//		refreshTokenString, err := refreshToken.SignedString([]byte("secretKey"))
-//		if err != nil {
-//			return Token{}, err
-//		}
-//
-//		return Token{
-//			AccessToken:  accessTokenString,
-//			RefreshToken: refreshTokenString,
-//		}, nil
-//	}
 func GenerateToken(userId int, expiration time.Duration) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id":  userId,
-		"exp": time.Now().Add(expiration).Unix(),
+		"id":            userId,
+		"exp":           time.Now().Add(expiration).Unix(),
+		"authorization": true,
 	})
 
-	tokenString, err := token.SignedString([]byte("secretKey"))
+	tokenString, err := token.SignedString([]byte("secret_key"))
 	if err != nil {
 		return "", err
 	}
@@ -54,7 +22,7 @@ func GenerateToken(userId int, expiration time.Duration) (string, error) {
 
 func RefreshToken(refreshTokenString string) (string, error) {
 	token, err := jwt.ParseWithClaims(refreshTokenString, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte("secretKey"), nil
+		return []byte("secret_key"), nil
 	})
 	if err != nil {
 		return "", err
@@ -71,7 +39,7 @@ func RefreshToken(refreshTokenString string) (string, error) {
 		"exp": time.Now().Add(time.Minute * 10).Unix(),
 	})
 
-	newAccessTokenString, err := newAccessToken.SignedString([]byte("secretKey"))
+	newAccessTokenString, err := newAccessToken.SignedString([]byte("secret_key"))
 	if err != nil {
 		return "", err
 	}
