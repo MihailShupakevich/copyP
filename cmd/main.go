@@ -39,30 +39,12 @@ func main() {
 	postH := postHandler.New(postUC)
 	router := gin.Default()
 
-	v0 := router.Group("user")
-	{
+	userGroup := router.Group("/user")
+	userH.SetupRoutes(userGroup)
 
-		v0.POST("/register", userH.Registration)
-		//token
-		v0.POST("/login", userH.Login)
-		v0.POST("/refresh", userH.RefreshToken)
-		//
-		v0.GET("/", userH.FindUsers)
-		v0.POST("/users", userH.CreateUsers)
-		v0.GET("/:id", userH.FindUser)
-		v0.DELETE("/:id", userH.DeleteUser)
-		v0.PATCH("/:id", userH.UpdateUser)
+	postGroup := router.Group("/post")
+	postH.SetupRoutes(postGroup)
 
-		//v0.GET("/login", middlewares.JwtMiddleware(), userH.Login)
-	}
-
-	//post_handler router
-	v1 := router.Group("/post")
-	{
-		v1.PATCH("/:id", postH.UpdatePost)
-		v1.GET("/:id", postH.GetPost)
-		v1.POST("/post", postH.CreatePost)
-		v1.DELETE("/:id", postH.DeletePost)
-	}
 	router.Run(":8080")
+
 }

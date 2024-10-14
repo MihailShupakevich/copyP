@@ -70,6 +70,9 @@ func (uc *UsecaseForRepo) Login(user domain.User) (domain.User, error) {
 	if existingUser.UserName == "" {
 		return domain.User{}, nil
 	}
+	if existingUser.Password == "" {
+		return domain.User{}, nil
+	}
 	return existingUser, nil
 }
 

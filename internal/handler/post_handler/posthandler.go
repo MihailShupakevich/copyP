@@ -24,6 +24,13 @@ func New(ucp post_usecase.UsecaseForRepoPost) PostHandler {
 	return PostHandler{UC: &ucp}
 }
 
+func (h *PostHandler) SetupRoutes(router *gin.RouterGroup) {
+	router.PATCH("/:id", h.UpdatePost)
+	router.GET("/:id", h.GetPost)
+	router.POST("/post", h.CreatePost)
+	router.DELETE("/:id", h.DeletePost)
+}
+
 func (p *PostHandler) CreatePost(c *gin.Context) {
 	var newPost domain.Post
 	if err := c.ShouldBind(&newPost); err != nil {

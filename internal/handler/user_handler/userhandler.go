@@ -25,7 +25,19 @@ type userHandler struct {
 }
 
 func New(uc user_usecase.UsecaseForRepo) *userHandler {
+
 	return &userHandler{userUC: uc}
+}
+
+func (h *userHandler) SetupRoutes(router *gin.RouterGroup) {
+	router.POST("/register", h.Registration)
+	router.POST("/login", h.Login)
+	router.POST("/refresh", h.RefreshToken)
+	router.GET("/", h.FindUsers)
+	router.POST("/users", h.CreateUsers)
+	router.GET("/:id", h.FindUser)
+	router.DELETE("/:id", h.DeleteUser)
+	router.PATCH("/:id", h.UpdateUser)
 }
 
 func (h *userHandler) FindUsers(ctx *gin.Context) {
@@ -126,15 +138,26 @@ func (h *userHandler) Registration(ctx *gin.Context) {
 	body := new(domain.User)
 	err := ctx.BindJSON(body)
 	if err != nil {
-		ctx.JSON(400, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 	newBody, err := h.userUC.Registration(*body)
 	if err != nil {
-		ctx.JSON(400, "Error registration user")
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Error registration user"})
+		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"newBody": newBody, "message": "Успешно создан"})
-
+	userId := newBody.Id
+	tokenAccess, err := tokens.GenerateToken(userId, 3)
+	tokenRefresh, err := tokens.GenerateToken(userId, 10)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating token pair"})
+		return
+	}
+	ctx.Header("refresh_token", tokenRefresh)
+	ctx.Header("access_token", tokenAccess)
+	ctx.JSON(http.StatusOK, gin.H{"newBody": newBody})
 }
+
 func (h *userHandler) Login(ctx *gin.Context) {
 	body := new(domain.User)
 	err := ctx.BindJSON(body)
@@ -147,26 +170,31 @@ func (h *userHandler) Login(ctx *gin.Context) {
 		ctx.JSON(400, "Error login user")
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"login": login})
 
 	userId := login.Id
-	tokenPair, err := tokens.GenerateTokenPair(userId)
+	tokenAccess, err := tokens.GenerateToken(userId, 3)
+	tokenRefresh, err := tokens.GenerateToken(userId, 10)
 	if err != nil {
-		ctx.JSON(400, "Error generating token pair")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating token pair"})
+		return
 	}
-	ctx.JSON(200, gin.H{"login": login, "tokens": tokenPair})
+	ctx.Header("refresh_token", tokenRefresh)
+	ctx.Header("access_token", tokenAccess)
+	ctx.JSON(200, gin.H{"login": login})
 }
 
 func (h *userHandler) RefreshToken(ctx *gin.Context) {
-	refreshToken := ctx.PostForm("refresh_token")
+	refreshToken := ctx.GetHeader("refresh_token")
 	if refreshToken == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "refresh_token is required"})
 		return
 	}
-	newTokenPair, err := tokens.RefreshToken(refreshToken)
+
+	newToken, err := tokens.RefreshToken(refreshToken)
 	if err != nil {
-		ctx.JSON(403, gin.H{"error": "Error refresh token"})
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "Error refreshing token"})
 		return
 	}
-	ctx.JSON(200, newTokenPair)
+
+	ctx.JSON(http.StatusOK, newToken)
 }

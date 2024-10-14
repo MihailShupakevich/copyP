@@ -87,8 +87,7 @@ func (u *UserRepo) DeleteUser(userId int) (string, error) {
 
 func (u *UserRepo) Login(body domain.User) (domain.User, error) {
 	var user domain.User
-
-	if err := u.DB.First(&user, "username = ?", body.UserName).Error; err != nil {
+	if err := u.DB.First(&user, "user_name = ?", body.UserName).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return domain.User{}, nil // Пользователь не найден
 		}
