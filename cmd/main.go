@@ -1,50 +1,50 @@
 package main
 
 import (
+	"exp/config"
 	"exp/internal/db"
-	postHandler "exp/internal/handler/post"
-	user3 "exp/internal/handler/user"
-	"exp/internal/middlewares"
-	post2 "exp/internal/repository/post"
-	user2 "exp/internal/repository/user"
-	"exp/internal/usecase/post"
-	"exp/internal/usecase/user"
+	postHandler "exp/internal/handler/post_handler"
+	"exp/internal/handler/user_handler"
+	"exp/internal/repository/post_repo"
+	"exp/internal/repository/user_repo"
+	"exp/internal/usecase/post_usecase"
+	"exp/internal/usecase/user_usecase"
 	"github.com/gin-gonic/gin"
+	"log"
 )
 
 func main() {
+	cfg := config.Config{
+		RedisAddr:     "localhost:6379",
+		RedisPassword: "",
+		RedisDB:       0,
+	}
+	redis := db.RedisInit(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
+	if redis == nil {
+		log.Fatal("Ошибка инициализации Redis")
+	}
 
-	database, _ := db.Connect()
+	database, err := db.Connect()
+	if err != nil {
+		log.Fatalf("Ошибка подключения к PostgreSQL: %v", err)
+	}
 
-	userRepoRouter := user2.New(database)
-	userUC := user.New(userRepoRouter)
-	userH := user3.New(userUC)
+	userRepoRouter := user_repo.New(database, redis)
+	userUC := user_usecase.New(userRepoRouter, userRepoRouter)
+	userH := user_handler.New(userUC)
 
-	//post
-	postRepoRouter := post2.New(database)
-	postUC := post.New(postRepoRouter)
+	//post_handler
+	postRepoRouter := post_repo.New(database)
+	postUC := post_usecase.New(postRepoRouter)
 	postH := postHandler.New(postUC)
 	router := gin.Default()
 
-	v0 := router.Group("/user")
-	{
+	userGroup := router.Group("/user")
+	userH.SetupRoutes(userGroup)
 
-		v0.GET("/", userH.FindUsers)
-		v0.POST("/users", userH.CreateUsers)
-		v0.GET("/:id", userH.FindUser)
-		v0.DELETE("/:id", userH.DeleteUser)
-		v0.PATCH("/:id", userH.UpdateUser)
-		v0.POST("/register", userH.Registration)
-		v0.GET("/login", middlewares.JwtMiddleware(), userH.Login)
-	}
+	postGroup := router.Group("/post")
+	postH.SetupRoutes(postGroup)
 
-	//post router
-	v1 := router.Group("/post")
-	{
-		v1.PATCH("/:id", postH.UpdatePost)
-		v1.GET("/:id", postH.GetPost)
-		v1.POST("/post", postH.CreatePost)
-		v1.DELETE("/:id", postH.DeletePost)
-	}
 	router.Run(":8080")
+
 }

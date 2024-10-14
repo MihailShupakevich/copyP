@@ -1,8 +1,8 @@
-package post
+package post_handler
 
 import (
 	"exp/internal/domain"
-	"exp/internal/usecase/post"
+	"exp/internal/usecase/post_usecase"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -10,7 +10,7 @@ import (
 )
 
 type PostHandler struct {
-	UC post.UsecasePost
+	UC post_usecase.UsecasePost
 }
 
 type PostHandlerI interface {
@@ -20,8 +20,15 @@ type PostHandlerI interface {
 	UpdatePost(ctx *gin.Context)
 }
 
-func New(ucp post.UsecaseForRepoPost) PostHandler {
+func New(ucp post_usecase.UsecaseForRepoPost) PostHandler {
 	return PostHandler{UC: &ucp}
+}
+
+func (h *PostHandler) SetupRoutes(router *gin.RouterGroup) {
+	router.PATCH("/:id", h.UpdatePost)
+	router.GET("/:id", h.GetPost)
+	router.POST("/post", h.CreatePost)
+	router.DELETE("/:id", h.DeletePost)
 }
 
 func (p *PostHandler) CreatePost(c *gin.Context) {
@@ -34,7 +41,7 @@ func (p *PostHandler) CreatePost(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 	}
-	c.JSON(http.StatusCreated, gin.H{"post": createPost})
+	c.JSON(http.StatusCreated, gin.H{"post_handler": createPost})
 }
 func (p *PostHandler) DeletePost(c *gin.Context) {
 	id := c.Param("id")
